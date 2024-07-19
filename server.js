@@ -7,7 +7,7 @@ app.set("view engine", "ejs"); //ejs 템플릿 적용
 app.use(express.json()); //
 app.use(express.urlencoded({ extended: true }));
 
-const { MongoClient } = require("mongodb"); //mongodb 서버 연결
+const { MongoClient, ObjectId } = require("mongodb"); //mongodb 서버 연결
 const url = require("./key.js"); // key.js에서 url 변수 요청해서 가져오기
 
 let db;
@@ -32,9 +32,9 @@ app.get("/news", (요청, 응답) => {
   db.collection("post").insertOne({ title: "어쩌구" }); // post라는 컬렉션 폴더에
   응답.send("오늘 비옴");
 });
-
+/*************** 글 리스트 페이지****************/
 app.get("/list", async (요청, 응답) => {
-  let answer = await db.collection("post").find().toArray(); // post라는 컬렉션 폴더에
+  let answer = await db.collection("post").find().toArray(); // post라는 컬렉션 폴더에 모든 도큐먼트(toArray) 가져온다
   응답.render("list.ejs", { 글목록: answer });
 });
 
@@ -43,11 +43,84 @@ app.get("/time", async (요청, 응답) => {
   응답.render("time.ejs", { 시간: time });
 });
 
+/*************** 글 등록 페이지****************/
 app.get("/write", (req, res) => {
   res.render("write.ejs");
 });
 
-app.post("/add", (req, res) => {
+/*************** 글 등록 post****************/
+app.post("/add", async (req, res) => {
   console.log(req.body);
-  db.collection("post");
+
+  try {
+    if (req.body.title == "") {
+      res.send("제목 입력 안했는데?");
+    } else {
+      await db
+        .collection("post")
+        .insertOne({ title: req.body.title, content: req.body.content });
+      res.redirect("/list");
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("서버에러남");
+  }
+});
+
+/*************** 상세 페이지 조회 ****************/
+app.get("/detail/:id", async (req, res) => {
+  let postId = req.params; //파라미터 값 요청으로 받아옴
+
+  try {
+    let result = await db
+      .collection("post")
+      .findOne({ _id: new ObjectId(postId) });
+    if (result == null) {
+      res.status(400).send("url 잘못 입력함");
+    }
+    res.render("detail.ejs", { detail: result });
+  } catch (error) {
+    console.log(error);
+    res.status(400).send("url 잘못 입력함");
+  }
+});
+
+/*************** 게시물 수정페이지 이동 ****************/
+app.get("/edit/:id", async (req, res) => {
+  let postId = req.params; //파라미터 값 요청으로 받아옴
+
+  try {
+    let result = await db
+      .collection("post")
+      .findOne({ _id: new ObjectId(postId) });
+    if (result == null) {
+      res.status(400).send("url 잘못 입력함");
+    }
+    res.render("edit.ejs", { edit: result });
+  } catch (error) {
+    console.log(error);
+    res.status(400).send("url 잘못 입력함");
+  }
+});
+
+
+/*************** 게시물 수정 ****************/
+app.post("/edit", async (req, res) => {
+  console.log(req.body);
+
+  try {
+    if (req.body.title == "") {
+      res.send("제목 입력 안했는데?");
+    } else {
+      await db.collection("post").updateOne(
+        {_id: new ObjectId(req.body._id)},
+        {$set : {title: req.body.title,
+        content: req.body.content}
+      });
+      res.redirect("/list");
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("서버에러남");
+  }
 });

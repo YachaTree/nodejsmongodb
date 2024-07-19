@@ -7,17 +7,17 @@
     <title>Document</title>
   </head>
   <body class="grey-bg">
-    <%- include('nav.ejs') %>
-
+    <%- include('nav.ejs') %> 
+    <% for(let i = 0; i < 글목록.length; i++ ) { %>
     <div class="white-bg">
       <div class="list-box">
-        <h4><%= 글목록[0].title %></h4>
-        <p><%= 글목록[0].content %></p>
-      </div>
-      <div class="list-box">
-        <h4><%= 글목록[1].title %></h4>
-        <p><%= 글목록[1].content %></p>
+        <h4>
+          <a href="/detail/<%= 글목록[i]._id %>"><%= 글목록[i].title %></a>
+        </h4>
+        <p><%= 글목록[i].content %></p>
+        <a href="/edit/<%= 글목록[i]._id %>">✏️</a>
       </div>
     </div>
+    <% } %>
   </body>
 </html>
