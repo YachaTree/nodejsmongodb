@@ -1,8 +1,11 @@
 const express = require("express"); // express 라이브러리 사용하겠다는 뜻
 const app = express();
 
-app.use(express.static(__dirname + "/public")); //css파일 적용
+//css파일 적용, __dirname = "directory와 name의 합성어" 현재의 파일(file)이 위치한 폴더(directory)의 절대경로(absolute path)를 알려줌
+app.use(express.static(__dirname + "/public"));
 app.set("view engine", "ejs"); //ejs 템플릿 적용
+app.use(express.json()); //
+app.use(express.urlencoded({ extended: true }));
 
 const { MongoClient } = require("mongodb"); //mongodb 서버 연결
 const url = require("./key.js"); // key.js에서 url 변수 요청해서 가져오기
@@ -38,4 +41,13 @@ app.get("/list", async (요청, 응답) => {
 app.get("/time", async (요청, 응답) => {
   let time = new Date(); // post라는 컬렉션 폴더에
   응답.render("time.ejs", { 시간: time });
+});
+
+app.get("/write", (req, res) => {
+  res.render("write.ejs");
+});
+
+app.post("/add", (req, res) => {
+  console.log(req.body);
+  db.collection("post");
 });
