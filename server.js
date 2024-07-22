@@ -3,7 +3,6 @@ const app = express();
 const { MongoClient, ObjectId } = require("mongodb"); //mongodb 서버 연결
 const url = require("./key.js"); // key.js에서 url 변수 요청해서 가져오기
 const methodOverride = require("method-override");
-const socketIo = require("socket.io"); //socket 설정
 
 const session = require("express-session"); // 세션 만들때 사용하는 라이브러리
 const passport = require("passport"); //회원인증 도와주는 메인 라이브러리
@@ -15,6 +14,7 @@ app.use(
     secret: "암호화에 쓸 비번", // 세션의 document id는 암호화해서 유저에게 보냄
     resave: false, // 유저가 서버로 요청할 떄마다 세션 갱신할건지
     saveUninitialized: false, //로그인 안해도 세션 만들것인지
+    cookie: { maxAge: 60 * 60 * 1000 }, //세선 유지 시간 설정 : 1시간
   })
 );
 
@@ -180,3 +180,56 @@ app.get("/list/next/:id", async (req, res) => {
 });
 
 /*************** 로그인 구현 ****************/
+passport.use(
+  //유저가 제출한 아이디 비번 검사하는 코드 적는곳
+  new LocalStrategy(async (입력한아이디, 입력한비번, cb) => {
+    let result = await db
+      .collection("user")
+      .findOne({ username: 입력한아이디 });
+    if (!result) {
+      return cb(null, false, { message: "아이디 DB에 없음" });
+    }
+    if (result.password == 입력한비번) {
+      return cb(null, result);
+    } else {
+      return cb(null, false, { message: "비번불일치" });
+    }
+  })
+);
+
+//위의 result값이 user에 들어감
+passport.serializeUser((user, done) => {
+  //user = 로그인 시도중인 유저정보
+  console.log(user);
+  process.nextTick(() => {
+    done(null, { id: user._id, username: user.username });
+  });
+});
+//passport.serializeUser 거치면 로그인시 세션 document 발행해줌
+
+passport.deserializeUser(async (user, done) => {
+  let result = await db
+    .collection("user")
+    .findOne({ _id: new ObjectId(user.id) });
+  delete result.password;
+  //유저가 보낸 쿠기 분석은 passport.deserializeUser()
+  process.nextTick(() => {
+    done(null, result);
+  });
+});
+
+app.get("/login", async (req, res) => {
+  console.log(req.user);
+  res.render("login.ejs");
+});
+
+app.post("/login", async (req, res, next) => {
+  passport.authenticate("local", (error, user, info) => {
+    if (error) return res.status(500).json(error);
+    if (!user) return res.status(401).json(info.message);
+    req.logIn(user, (err) => {
+      if (err) return next(err);
+      res.redirect("/");
+    });
+  })(req, res, next);
+});
