@@ -7,17 +7,39 @@
     <title>Document</title>
   </head>
   <body class="grey-bg">
-    <%- include('nav.ejs') %> 
-    <% for(let i = 0; i < 글목록.length; i++ ) { %>
+    <%- include('nav.ejs') %>
+
     <div class="white-bg">
+      <% for(let i = 0; i < 글목록.length; i++ ) { %>
       <div class="list-box">
         <h4>
           <a href="/detail/<%= 글목록[i]._id %>"><%= 글목록[i].title %></a>
+          <a href="/edit/<%= 글목록[i]._id %>">✏️</a>
+          <span class="delete" data-id="<%= 글목록[i]._id %>">🗑️</span>
+          <!-- data-'어쩌구' = '저쩌구' => 어쩌구라는 이름으로 저쩌구라는 데이터를 저장할수 있다. -->
         </h4>
         <p><%= 글목록[i].content %></p>
-        <a href="/edit/<%= 글목록[i]._id %>">✏️</a>
       </div>
+      <% } %>
     </div>
-    <% } %>
+
+    <a href="/list/next/<%= 글목록[글목록.length-1]._id %>">다음</a>
+
+    <script>
+      for (let i = 0; i < "<%= 글목록.length %>"; i++) {
+        document
+          .querySelectorAll(".delete")
+          [i].addEventListener("click", function (e) {
+            fetch("/delete?docid=" + e.target.dataset.id, {
+              //e.target = 지금 유저가 클릭한 html요소, 안에 있던 id라고 저장된 데이터를 가져와
+              method: "DELETE",
+            })
+              .then((r) => r.text()) //
+              .then((r) => {
+                e.target.parentElement.parentElement.style.display = "none";
+              });
+          });
+      }
+    </script>
   </body>
 </html>
