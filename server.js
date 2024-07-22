@@ -3,7 +3,22 @@ const app = express();
 const { MongoClient, ObjectId } = require("mongodb"); //mongodb 서버 연결
 const url = require("./key.js"); // key.js에서 url 변수 요청해서 가져오기
 const methodOverride = require("method-override");
-const socketIo = require("socket.io"); //
+const socketIo = require("socket.io"); //socket 설정
+
+const session = require("express-session"); // 세션 만들때 사용하는 라이브러리
+const passport = require("passport"); //회원인증 도와주는 메인 라이브러리
+const LocalStrategy = require("passport-local"); //아이디 비번 방식으로 인증하고 싶을때 사용하는 라이브러리
+
+app.use(passport.initialize());
+app.use(
+  session({
+    secret: "암호화에 쓸 비번", // 세션의 document id는 암호화해서 유저에게 보냄
+    resave: false, // 유저가 서버로 요청할 떄마다 세션 갱신할건지
+    saveUninitialized: false, //로그인 안해도 세션 만들것인지
+  })
+);
+
+app.use(passport.session());
 
 app.use(methodOverride("_method"));
 //css파일 적용, __dirname = "directory와 name의 합성어" 현재의 파일(file)이 위치한 폴더(directory)의 절대경로(absolute path)를 알려줌
@@ -164,4 +179,4 @@ app.get("/list/next/:id", async (req, res) => {
   //1번~5번까지 글 찾아서 result변수에 저장
 });
 
-/*************** 채팅 서비스 구현 ****************/
+/*************** 로그인 구현 ****************/
