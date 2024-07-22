@@ -3,6 +3,7 @@ const app = express();
 const { MongoClient, ObjectId } = require("mongodb"); //mongodb 서버 연결
 const url = require("./key.js"); // key.js에서 url 변수 요청해서 가져오기
 const methodOverride = require("method-override");
+const socketIo = require("socket.io"); //
 
 app.use(methodOverride("_method"));
 //css파일 적용, __dirname = "directory와 name의 합성어" 현재의 파일(file)이 위치한 폴더(directory)의 절대경로(absolute path)를 알려줌
@@ -162,3 +163,5 @@ app.get("/list/next/:id", async (req, res) => {
   res.render("list.ejs", { 글목록: result });
   //1번~5번까지 글 찾아서 result변수에 저장
 });
+
+/*************** 채팅 서비스 구현 ****************/
