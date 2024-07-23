@@ -107,20 +107,15 @@ app.post("/add", async (req, res) => {
 
 /*************** 상세 페이지 조회 ****************/
 app.get("/detail/:id", async (req, res) => {
-  let postId = req.params; //파라미터 값 요청으로 받아옴
+  let result2 = await db
+    .collection("comment")
+    .find({ parentId: new ObjectId(req.params.id) })
+    .toArray();
 
-  try {
-    let result = await db
-      .collection("post")
-      .findOne({ _id: new ObjectId(postId) });
-    if (result == null) {
-      res.status(400).send("url 잘못 입력함");
-    }
-    res.render("detail.ejs", { detail: result });
-  } catch (error) {
-    console.log(error);
-    res.status(400).send("url 잘못 입력함");
-  }
+  let result = await db
+    .collection("post")
+    .findOne({ _id: new ObjectId(req.params.id) });
+  res.render("detail.ejs", { result: result, result2: result2 });
 });
 
 /*************** 게시물 수정페이지 이동 ****************/
@@ -294,13 +289,13 @@ app.get("/search", async (req, res) => {
 
 /*************** 댓글 기능 ****************/
 
-app.post("/comment", async (요청, 응답) => {
+app.post("/comment", async (req, res) => {
   let result = await db.collection("comment").insertOne({
-    content: 요청.body.content,
-    writerId: new ObjectId(요청.user._id),
-    writer: 요청.user.username,
-    parentId: new ObjectId(요청.body.parentId),
+    content: req.body.content,
+    writerId: new ObjectId(req.user._id),
+    writer: req.user.username,
+    parentId: new ObjectId(req.body.parentId),
   });
 
-  응답.redirect("back");
+  res.redirect("back"); //이전페이지
 });
