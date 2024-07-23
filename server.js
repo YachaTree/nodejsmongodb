@@ -7,6 +7,10 @@ const methodOverride = require("method-override");
 const session = require("express-session"); // 세션 만들때 사용하는 라이브러리
 const passport = require("passport"); //회원인증 도와주는 메인 라이브러리
 const LocalStrategy = require("passport-local"); //아이디 비번 방식으로 인증하고 싶을때 사용하는 라이브러리
+const bcrypt = require("bcrypt"); // 암호화 설정
+const MongoStore = require("connect-mongo"); //세션을 몽고 db에 저장하기 위한 라이브러리
+
+require("dotenv").config;
 
 app.use(passport.initialize());
 app.use(
@@ -15,6 +19,11 @@ app.use(
     resave: false, // 유저가 서버로 요청할 떄마다 세션 갱신할건지
     saveUninitialized: false, //로그인 안해도 세션 만들것인지
     cookie: { maxAge: 60 * 60 * 1000 }, //세선 유지 시간 설정 : 1시간
+    store: MongoStore.create({
+      // db에 이제 로그인시 세션 document 발행해줌
+      mongoUrl: url,
+      dbName: "forum",
+    }),
   })
 );
 
@@ -26,6 +35,7 @@ app.use(express.static(__dirname + "/public"));
 app.set("view engine", "ejs"); //ejs 템플릿 적용
 app.use(express.json()); //
 app.use(express.urlencoded({ extended: true }));
+// app.use(checkLogin); //api 100개 미들웨어 전부 적용하고 싶다 => 이렇게하면 모든 api에 checkLogin 미들웨어 적용됨
 
 let db;
 new MongoClient(url)
@@ -41,23 +51,30 @@ new MongoClient(url)
     console.log(err);
   });
 
-app.get("/", (요청, 응답) => {
-  응답.sendFile(__dirname + "/index.html");
-});
+// function checkLogin(req, res, next) {
+//   if (!req.user) {
+//     로그인하세요;
+//   }
+//   next();
+// }
 
-app.get("/news", (요청, 응답) => {
+// app.get("/", checkLogin, (req, res) => {
+//   res.sendFile(__dirname + "/index.html");
+// });
+
+app.get("/news", (req, res) => {
   db.collection("post").insertOne({ title: "어쩌구" }); // post라는 컬렉션 폴더에
-  응답.send("오늘 비옴");
+  res.send("오늘 비옴");
 });
 /*************** 글 리스트 페이지****************/
-app.get("/list", async (요청, 응답) => {
+app.get("/list", async (req, res) => {
   let answer = await db.collection("post").find().toArray(); // post라는 컬렉션 폴더에 모든 도큐먼트(toArray) 가져온다
-  응답.render("list.ejs", { 글목록: answer });
+  res.render("list.ejs", { 글목록: answer });
 });
 
-app.get("/time", async (요청, 응답) => {
+app.get("/time", async (req, res) => {
   let time = new Date(); // post라는 컬렉션 폴더에
-  응답.render("time.ejs", { 시간: time });
+  res.render("time.ejs", { 시간: time });
 });
 
 /*************** 글 등록 페이지****************/
@@ -189,7 +206,8 @@ passport.use(
     if (!result) {
       return cb(null, false, { message: "아이디 DB에 없음" });
     }
-    if (result.password == 입력한비번) {
+    if (await bcrypt.compare(입력한비번, result.password)) {
+      //bcrypy한 Db비번과 유저 입력 비번 비교
       return cb(null, result);
     } else {
       return cb(null, false, { message: "비번불일치" });
@@ -202,11 +220,14 @@ passport.serializeUser((user, done) => {
   //user = 로그인 시도중인 유저정보
   console.log(user);
   process.nextTick(() => {
+    //세션 만들어줌 => 쿠키를 유저에게 보내줌
     done(null, { id: user._id, username: user.username });
   });
 });
 //passport.serializeUser 거치면 로그인시 세션 document 발행해줌
 
+//세션쿠키를 가진 유저가 요청을 날릴때마다 실행됨.그럼 쓸데없는 Db조회 발생할수 있음,메인페이지 방문할때 필요없을수도 있음.
+//그래서 특정 라우터 안에서 작동하게 할수 있음.
 passport.deserializeUser(async (user, done) => {
   let result = await db
     .collection("user")
@@ -233,3 +254,20 @@ app.post("/login", async (req, res, next) => {
     });
   })(req, res, next);
 });
+
+/*************** 회원가입 구현 ****************/
+app.get("/register", (req, res) => {
+  res.render("register.ejs");
+});
+
+app.post("/register", async (req, res) => {
+  let hash = await bcrypt.hash(req.body.password, 10);
+
+  await db.collection("user").insertOne({
+    username: req.body.username,
+    password: hash,
+  });
+  res.redirect("/");
+});
+
+//세션데이터를 Db에 저장
