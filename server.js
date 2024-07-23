@@ -68,6 +68,7 @@ app.get("/news", (req, res) => {
 });
 /*************** 글 리스트 페이지****************/
 app.get("/list", async (req, res) => {
+  console.log(req.user);
   let answer = await db.collection("post").find().toArray(); // post라는 컬렉션 폴더에 모든 도큐먼트(toArray) 가져온다
   res.render("list.ejs", { 글목록: answer });
 });
@@ -84,15 +85,18 @@ app.get("/write", (req, res) => {
 
 /*************** 글 등록 post****************/
 app.post("/add", async (req, res) => {
-  console.log(req.body);
+  console.log(req.user);
 
   try {
     if (req.body.title == "") {
       res.send("제목 입력 안했는데?");
     } else {
-      await db
-        .collection("post")
-        .insertOne({ title: req.body.title, content: req.body.content });
+      await db.collection("post").insertOne({
+        title: req.body.title,
+        content: req.body.content,
+        user: req.user._id,
+        username: req.user.username,
+      });
       res.redirect("/list");
     }
   } catch (error) {
@@ -164,7 +168,10 @@ app.delete("/delete", async (req, res) => {
 
   await db.collection("post").deleteOne(
     //db 삭제하는 메서드
-    { _id: new ObjectId(req.query.docid) }
+    {
+      _id: new ObjectId(req.query.docid),
+      username: new ObjectId(req.user._id),
+    }
   );
   res.send("삭제완료");
 });
@@ -250,7 +257,7 @@ app.post("/login", async (req, res, next) => {
     if (!user) return res.status(401).json(info.message);
     req.logIn(user, (err) => {
       if (err) return next(err);
-      res.redirect("/");
+      res.redirect("/list");
     });
   })(req, res, next);
 });
@@ -267,7 +274,33 @@ app.post("/register", async (req, res) => {
     username: req.body.username,
     password: hash,
   });
-  res.redirect("/");
+  res.redirect("/list");
 });
 
-//세션데이터를 Db에 저장
+/*************** 검색기능 ****************/
+
+app.get("/search", async (req, res) => {
+  let 검색조건 = [
+    {
+      $search: {
+        index: "title_index",
+        text: { query: req.query.val, path: "title" },
+      },
+    },
+  ];
+  let result = await db.collection("post").aggregate(검색조건).toArray();
+  res.render("search.ejs", { 글목록: result });
+});
+
+/*************** 댓글 기능 ****************/
+
+app.post("/comment", async (요청, 응답) => {
+  let result = await db.collection("comment").insertOne({
+    content: 요청.body.content,
+    writerId: new ObjectId(요청.user._id),
+    writer: 요청.user.username,
+    parentId: new ObjectId(요청.body.parentId),
+  });
+
+  응답.redirect("back");
+});
