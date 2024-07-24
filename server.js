@@ -10,6 +10,13 @@ const LocalStrategy = require("passport-local"); //아이디 비번 방식으로
 const bcrypt = require("bcrypt"); // 암호화 설정
 const MongoStore = require("connect-mongo"); //세션을 몽고 db에 저장하기 위한 라이브러리
 
+//socket io
+const { createServer } = require("http");
+const { Server } = require("socket.io");
+const { Socket } = require("dgram");
+const server = createServer(app);
+const io = new Server(server);
+
 require("dotenv").config;
 
 app.use(passport.initialize());
@@ -43,7 +50,7 @@ new MongoClient(url)
   .then((client) => {
     console.log("DB연결성공");
     db = client.db("forum");
-    app.listen(8080, () => {
+    server.listen(8080, () => {
       console.log("http://localhost:8080 에서 서버 실행중");
     });
   })
@@ -298,4 +305,57 @@ app.post("/comment", async (req, res) => {
   });
 
   res.redirect("back"); //이전페이지
+});
+
+/*************** 채팅 기능 ****************/
+app.get("/chat/request", async (req, res) => {
+  await db.collection("chatroom").insertOne({
+    member: [req.user._id, new ObjectId(req.query.writerId)], //db 채팅방 도큐먼트에 요청한 사람 id, 글쓴이의 아이디 저장
+    date: new Date(),
+  });
+  res.redirect("/chat/list");
+});
+
+app.get("/chat/list", async (req, res) => {
+  let result = await db
+    .collection("chatroom")
+    .find({ member: req.user._id }) //Db에서 내가 속한 채팅방 불러오기
+    .toArray();
+  res.render("chatList.ejs", { result: result });
+});
+
+app.get("/chat/detail", async (req, res) => {
+  //채팅방 상세페이지
+  res.render("chatDetail.ejs");
+});
+
+app.get("/chat/detail/:id", async (req, res) => {
+  //chatList에서 파라미터 받음
+  console.log(req.params.id);
+  let result = await db
+    .collection("chatroom")
+    .findOne({ _id: new ObjectId(req.params.id) }); //내가 속한 채팅방 상세페이지
+  res.render("chatDetail.ejs", { result: result });
+});
+
+/*************** socket.io ****************/
+io.on("connection", (socket) => {
+  //유저가 웹소켓 연결시 서버에서 코드실행하려면
+  console.log("웹소켓 연결");
+
+  //room : 유저들 들어갈수 있는 웹소켓방, 한유저는 여러 Room에 들어갈수 있음, [서버 -> room에 속한 유저] 메세지 전송가능
+  socket.on("ask-join", (data) => {
+    socket.request.session; //현재 로그인한 유저
+    socket.join(data);
+  });
+
+  socket.on("message-send", (data) => {
+    // await db.collection("chatMessage").insertOne({
+    //   parentRoom: new ObjectId(data.room),
+    //   content: data.msg,
+    //   who: new ObjectId(socket.request.session.passport.user.id),
+    // });
+    //message-send 서버로부터 수신하면
+    io.to(data.room).emit("message-broadcast", data.msg);
+  });
 });

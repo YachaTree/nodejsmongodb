@@ -8,10 +8,16 @@
   </head>
   <body class="grey-bg">
     <%- include('nav.ejs') %>
-    <div class="detail-bg">
-      <h4><%= detail.title %></h4>
-      <p><%= detail.content %></p>
-      <a href="/chat/request?writerId=<%= result.user %>">채팅하기</a>
+
+    <div class="white-bg">
+      <% for(let i = 0; i < result.length; i++ ) { %>
+      <div class="list-box">
+        <h4>
+          <a href="/chat/detail/<%= result[i]._id %>">채팅방<%= i %></a>
+        </h4>
+        <p>채팅방설명</p>
+      </div>
+      <% } %>
     </div>
   </body>
 </html>
