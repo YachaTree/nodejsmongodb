@@ -64,15 +64,16 @@ io.on("connection", (socket) => {
 
   //Someone is typing
   socket.on("typing", (data) => {
-    socket.broadcast.emit("notifyTyping", {
+    socket.to(data.roomId).emit("notifyTyping", {
       user: data.user,
       message: data.message,
+      roomId: data.roomId,
     });
   });
 
   //when soemone stops typing
-  socket.on("stopTyping", () => {
-    socket.broadcast.emit("notifyStopTyping");
+  socket.on("stopTyping", (roomId) => {
+    socket.to(roomId).emit("notifyStopTyping", { roomId });
   });
 
   socket.on("chat message", function (msg) {
