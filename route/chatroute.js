@@ -20,6 +20,21 @@ router.route("/").get((req, res, next) => {
   });
 });
 
+// 로그인한 사용자가 만든 채팅방과 초대된 채팅방 목록 가져오기
+router.route("/user/:username/rooms").get((req, res, next) => {
+  const username = req.params.username;
+  res.setHeader("Content-Type", "application/json");
+  res.statusCode = 200;
+
+  connectdb.then((db) => {
+    ChatRoom.find({
+      $or: [{ members: username }, { createdBy: username }],
+    }).then((rooms) => {
+      res.json(rooms);
+    });
+  });
+});
+
 // 채팅방 목록 가져오기
 router.route("/rooms").get((req, res, next) => {
   res.setHeader("Content-Type", "application/json");
@@ -48,7 +63,7 @@ router.route("/user/:username/rooms").get((req, res, next) => {
 // 특정 채팅방의 메시지 가져오기
 router.route("/rooms/:id/messages").get((req, res, next) => {
   const roomId = req.params.id;
-  const username = req.headers["username"]; // 요청 헤더에서 사용자 이름을 가져옴
+  const username = req.headers["username"];
 
   connectdb.then((db) => {
     ChatRoom.findById(roomId).then((room) => {
@@ -65,6 +80,7 @@ router.route("/rooms/:id/messages").get((req, res, next) => {
 
 // 채팅방 추가하는 엔드포인트
 router.route("/createRoom").post((req, res, next) => {
+  console.log("Create Room Request Body:", req.body); // 요청 바디 로그
   res.setHeader("Content-Type", "application/json");
   res.statusCode = 200;
 
@@ -75,9 +91,11 @@ router.route("/createRoom").post((req, res, next) => {
     newRoom
       .save()
       .then((room) => {
+        console.log("New Room Created:", room); // 생성된 방 로그
         res.json(room);
       })
       .catch((err) => {
+        console.error("Error creating room:", err); // 오류 로그
         res.status(500).json({ error: err.message });
       });
   });

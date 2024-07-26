@@ -18,9 +18,9 @@ const http = require("http").Server(app);
 // require the socket.io module
 const io = new Server(http, {
   cors: {
-    origin: "http://localhost:8888", // 클라이언트의 주소를 허용
+    origin: "http://localhost:8888",
     methods: ["GET", "POST"],
-    allowedHeaders: ["Content-Type"],
+    allowedHeaders: ["Content-Type", "Authorization", "username"],
     credentials: true,
   },
 });
@@ -33,9 +33,9 @@ const port = 3000;
 app.use(bodyParser.json());
 app.use(
   cors({
-    origin: "http://localhost:8888", // 스프링 서버 주소
+    origin: "http://localhost:8888",
     methods: ["GET", "POST"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "username"],
     credentials: true,
   })
 );
@@ -52,6 +52,11 @@ app.use("/login", loginRouter);
 // 소켓 이벤트 설정
 io.on("connection", (socket) => {
   console.log("사용자 연결됨");
+
+  socket.on("joinRoom", (roomId) => {
+    socket.join(roomId);
+    console.log(`User joined room: ${roomId}`);
+  });
 
   socket.on("disconnect", function () {
     console.log("사용자 연결 해제됨");
@@ -88,6 +93,7 @@ io.on("connection", (socket) => {
         message: msg.message,
         sender: msg.sender,
         createdAt: new Date(), // Date 객체로 설정
+        roomId: msg.roomId,
       });
 
       chatMessage.save();
