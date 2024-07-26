@@ -65,7 +65,7 @@ io.on("connection", (socket) => {
     });
   });
 
-  //when soemone stops typing
+  //when soemone stops typingg
   socket.on("stopTyping", () => {
     socket.broadcast.emit("notifyStopTyping");
   });
