@@ -84,10 +84,18 @@ router.route("/createRoom").post((req, res, next) => {
   res.setHeader("Content-Type", "application/json");
   res.statusCode = 200;
 
-  const { roomName, members } = req.body;
+  const { roomName, createdBy, members } = req.body;
+
+  if (!roomName || !createdBy || !members || members.length === 0) {
+    return res.status(400).json({ error: "Invalid request body" });
+  }
 
   connectdb.then((db) => {
-    let newRoom = new ChatRoom({ name: roomName, members: members });
+    let newRoom = new ChatRoom({
+      name: roomName,
+      createdBy: createdBy,
+      members: members,
+    });
     newRoom
       .save()
       .then((room) => {
