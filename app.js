@@ -42,7 +42,7 @@ app.use(
 
 //bodyparser middleware
 //bodyparser : "body-parser"는 node.js의 모듈로써,
-//클라이언트 POST request data의 body로부터 파라미터를 편리하게 추출해주는 역할
+//클라이언트 POST request data의 body로부터 파라미터를 편리하게 추출해주는 역할임
 app.use(bodyParser.json());
 
 // //routes
