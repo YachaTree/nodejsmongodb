@@ -8,7 +8,7 @@ const loginRouter = require("./route/loginRoute");
 //database connection
 const Chat = require("./models/Chat"); // 데이터베이스 모델
 const ChatRoom = require("./models/ChatRoom"); // 새로운 채팅방 모델 추가
-const connect = require("./dbconnect"); // 데이터베이스 모델
+const connect = require("./dbconnect"); // 데이터베이스 모델임
 
 const app = express();
 const { Server } = require("socket.io");
